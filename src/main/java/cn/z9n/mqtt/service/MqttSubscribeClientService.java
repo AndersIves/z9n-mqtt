@@ -92,6 +92,8 @@ public class MqttSubscribeClientService {
     }
 
     private void reInit(List<SubscriberInfo> subscriberInfoList) throws MqttException {
+        mqttClient.close(true);
+
         mqttClient = new MqttClient(serverUrl, config.getClientId(), new MemoryPersistence());
         // 设定分发器
         mqttClient.setCallback(mqttCallback);

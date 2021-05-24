@@ -8,6 +8,9 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+
 /**
  * @Author: 张子玄(罗小黑) YCKJ3690
  * @Date: 2021/5/20 17:28
@@ -20,11 +23,11 @@ public class TestPublisher implements ApplicationRunner {
     @Override
     @SuppressWarnings("AlibabaAvoidManuallyCreateThread")
     public void run(ApplicationArguments args) throws Exception {
-        for (int i = 0; i < 5000; i++) {
+        for (int i = 0; i < 1; i++) {
             new Thread(() -> {
                 while (true) {
                     try {
-                        mqttPublishProcessor.publish("test1/"+Math.random(), "hello");
+                        mqttPublishProcessor.publish("test1/"+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), "hello mqtt");
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
