@@ -17,7 +17,7 @@ import org.springframework.context.annotation.Configuration;
 public class MqttSubscriberConfiguration {
 
     @Bean("mqttSubscriberRegister")
-    protected MqttSubscriberRegister mqttSubscriberRegister() {
+    protected static MqttSubscriberRegister mqttSubscriberRegister() {
         return new MqttSubscriberRegister();
     }
 
