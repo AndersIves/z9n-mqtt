@@ -10,6 +10,7 @@ import com.alibaba.fastjson.JSON;
 import lombok.extern.slf4j.Slf4j;
 import org.eclipse.paho.client.mqttv3.*;
 import org.eclipse.paho.client.mqttv3.persist.MemoryPersistence;
+import org.springframework.context.ApplicationContext;
 import org.springframework.util.CollectionUtils;
 import org.springframework.util.StringUtils;
 
@@ -31,18 +32,21 @@ public class MqttSubscribeClientService {
 
     private final MqttConnectOptions options;
 
+    private final ApplicationContext applicationContext;
+
     private final MqttCallback mqttCallback;
 
     private final List<SubscriberInfo> subscriberInfoList;
 
     private final String serverUrl;
 
-    public MqttSubscribeClientService(MqttSubscriberConfig config, MqttSubscriberRegister mqttSubscriberRegister) {
+    public MqttSubscribeClientService(ApplicationContext applicationContext, MqttSubscriberConfig config, MqttSubscriberRegister mqttSubscriberRegister) {
         this.config = config;
+        this.applicationContext = applicationContext;
 
         serverUrl = "tcp://" + config.getIp() + ":" + config.getPort();
 
-        subscriberInfoList = convert(mqttSubscriberRegister.getMqttSubscribeProcessorList());
+        subscriberInfoList = convert(mqttSubscriberRegister.getMqttSubscribeProcessorBeanNames());
 
         options = new MqttConnectOptions();
         options.setConnectionTimeout(config.getConnectionTimeout());
@@ -148,34 +152,35 @@ public class MqttSubscribeClientService {
             }
 
             @Override
-            public void messageArrived(String topic, MqttMessage message) {
+            public synchronized void messageArrived(String topic, MqttMessage message) {
                 // 分发逻辑
-                List<SubscriberInfo> dispatchList = subscriberInfoList.stream()
-                        .filter(i -> {
-                            String matchStr = i.getTopic();
-                            if (matchStr.equals(topic)) {
-                                return true;
-                            }
-                            if (matchStr.endsWith("#")) {
-                                return topic.startsWith(matchStr.substring(0, matchStr.length() - 1));
-                            }
-                            return false;
-                        })
-                        .collect(Collectors.toList());
-                log.debug("mqtt dispatch message, topic:{}, qos:{}, topicList:{}", topic, message.getQos(), dispatchList);
-                for (SubscriberInfo subscriberInfo : dispatchList) {
-                    try {
-                        subscriberInfo.getMessageQueue().add(MqttProcessObject.builder()
-                                .topic(topic)
-                                .message(message)
-                                .build());
-                    } catch (IllegalStateException e) {
-                        log.error("提交消息到队列失败, topic:{}, subscriber:{}, message:{}",
-                                topic,
-                                subscriberInfo.getMqttSubscribeProcessor().getClass().getName(),
-                                e.getMessage(), e);
+                for (int i = 0; i < subscriberInfoList.size(); i++) {
+                    SubscriberInfo subscriberInfo = subscriberInfoList.get(i);
+                    String matchStr = subscriberInfo.getTopic();
+                    if (matchStr.equals(topic) || (matchStr.endsWith("#") && topic.startsWith(matchStr.substring(0, matchStr.length() - 1)))) {
+                        // 分发到该队列
+                        log.debug("mqtt dispatch message, topic:{}, qos:{}, aimTopic:{}", topic, message.getQos(), matchStr);
+                        try {
+                            subscriberInfo.getMessageQueue().add(MqttProcessObject.builder()
+                                    .topic(topic)
+                                    .message(message)
+                                    .build());
+                        } catch (IllegalStateException e) {
+                            log.error("提交消息到队列失败, topic:{}, subscriber:{}, message:{}",
+                                    topic,
+                                    subscriberInfo.getMqttSubscribeProcessor().getClass().getName(),
+                                    e.getMessage(), e);
+                        }
+                        // 前移一位
+                        if (i != 0) {
+                            SubscriberInfo previous = subscriberInfoList.get(i - 1);
+                            subscriberInfoList.set(i - 1, subscriberInfo);
+                            subscriberInfoList.set(i, previous);
+                        }
+                        return;
                     }
                 }
+                log.warn("The message has no corresponding subscription processor, which is caused by some unknown issues. topic:{}", topic);
             }
 
 
@@ -191,8 +196,9 @@ public class MqttSubscribeClientService {
      * @param mqttSubscribeProcessorList
      * @return
      */
-    private List<SubscriberInfo> convert(List<MqttSubscribeProcessor> mqttSubscribeProcessorList) {
+    private List<SubscriberInfo> convert(List<String> mqttSubscribeProcessorList) {
         return mqttSubscribeProcessorList.stream()
+                .map(i -> (MqttSubscribeProcessor) applicationContext.getBean(i))
                 .map(i -> {
                     MqttSubscriber mqttSubscriber = i.getClass().getAnnotation(MqttSubscriber.class);
                     String topic = mqttSubscriber.topic();

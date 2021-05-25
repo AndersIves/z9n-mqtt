@@ -8,8 +8,15 @@ import org.springframework.boot.ApplicationArguments;
 import org.springframework.boot.ApplicationRunner;
 import org.springframework.stereotype.Component;
 
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.Enumeration;
+import java.util.List;
 
 /**
  * @Author: 张子玄(罗小黑) YCKJ3690
@@ -27,7 +34,28 @@ public class TestPublisher implements ApplicationRunner {
             new Thread(() -> {
                 while (true) {
                     try {
-                        mqttPublishProcessor.publish("test1/"+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), "hello mqtt");
+                        List<String> ipList = new ArrayList<>();
+                        try {
+                            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+                            NetworkInterface networkInterface;
+                            Enumeration<InetAddress> inetAddresses;
+                            InetAddress inetAddress;
+                            String ip;
+                            while (networkInterfaces.hasMoreElements()) {
+                                networkInterface = networkInterfaces.nextElement();
+                                inetAddresses = networkInterface.getInetAddresses();
+                                while (inetAddresses.hasMoreElements()) {
+                                    inetAddress = inetAddresses.nextElement();
+                                    if (inetAddress instanceof Inet4Address) {
+                                        ip = inetAddress.getHostAddress();
+                                        ipList.add(ip);
+                                    }
+                                }
+                            }
+                        } catch (SocketException e) {
+                            e.printStackTrace();
+                        }
+                        mqttPublishProcessor.publish("test2/"+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), "hello mqtt, im: "+ipList);
                     } catch (Exception e) {
                         e.printStackTrace();
                     }

@@ -11,8 +11,8 @@ import org.eclipse.paho.client.mqttv3.MqttMessage;
  * @Date: 2021/5/20 15:37
  */
 @Slf4j
-@MqttSubscriber(topic = "test1/#", qos = QosEnum.Q_2_EXACTLY_ONCE)
-public class TestSubscriber implements MqttSubscribeProcessor {
+@MqttSubscriber(topic = "test2/#", qos = QosEnum.Q_2_EXACTLY_ONCE)
+public class TestSubscriber2 implements MqttSubscribeProcessor {
     @Override
     public void process(String topic, MqttMessage message) throws Exception {
         // 业务代码

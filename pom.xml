@@ -9,7 +9,7 @@
         <relativePath/> <!-- lookup parent from repository -->
     </parent>
     <groupId>cn.z9n</groupId>
-    <artifactId>learn</artifactId>
+    <artifactId>z9n-mqtt</artifactId>
     <version>1.0.0</version>
     <name>z9n-mqtt</name>
     <properties>

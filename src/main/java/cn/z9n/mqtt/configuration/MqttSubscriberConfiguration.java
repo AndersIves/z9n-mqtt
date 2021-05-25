@@ -3,8 +3,10 @@ package cn.z9n.mqtt.configuration;
 import cn.z9n.mqtt.config.MqttSubscriberConfig;
 import cn.z9n.mqtt.service.MqttSubscribeClientService;
 import cn.z9n.mqtt.service.MqttSubscriberRegister;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -28,8 +30,9 @@ public class MqttSubscriberConfiguration {
 
     @Bean("mqttSubscribeClientService")
     protected MqttSubscribeClientService mqttSubscribeClientService(
+            @Autowired ApplicationContext applicationContext,
             @Qualifier("mqttSubscriberConfig") MqttSubscriberConfig mqttSubscriberConfig,
             @Qualifier("mqttSubscriberRegister") MqttSubscriberRegister mqttSubscriberRegister) {
-        return new MqttSubscribeClientService(mqttSubscriberConfig, mqttSubscriberRegister);
+        return new MqttSubscribeClientService(applicationContext, mqttSubscriberConfig, mqttSubscriberRegister);
     }
 }
