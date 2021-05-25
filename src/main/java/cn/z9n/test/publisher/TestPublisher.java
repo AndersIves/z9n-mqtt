@@ -30,31 +30,31 @@ public class TestPublisher implements ApplicationRunner {
     @Override
     @SuppressWarnings("AlibabaAvoidManuallyCreateThread")
     public void run(ApplicationArguments args) throws Exception {
+        List<String> ipList = new ArrayList<>();
+        try {
+            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
+            NetworkInterface networkInterface;
+            Enumeration<InetAddress> inetAddresses;
+            InetAddress inetAddress;
+            String ip;
+            while (networkInterfaces.hasMoreElements()) {
+                networkInterface = networkInterfaces.nextElement();
+                inetAddresses = networkInterface.getInetAddresses();
+                while (inetAddresses.hasMoreElements()) {
+                    inetAddress = inetAddresses.nextElement();
+                    if (inetAddress instanceof Inet4Address) {
+                        ip = inetAddress.getHostAddress();
+                        ipList.add(ip);
+                    }
+                }
+            }
+        } catch (SocketException e) {
+            e.printStackTrace();
+        }
         for (int i = 0; i < 1; i++) {
             new Thread(() -> {
                 while (true) {
                     try {
-                        List<String> ipList = new ArrayList<>();
-                        try {
-                            Enumeration<NetworkInterface> networkInterfaces = NetworkInterface.getNetworkInterfaces();
-                            NetworkInterface networkInterface;
-                            Enumeration<InetAddress> inetAddresses;
-                            InetAddress inetAddress;
-                            String ip;
-                            while (networkInterfaces.hasMoreElements()) {
-                                networkInterface = networkInterfaces.nextElement();
-                                inetAddresses = networkInterface.getInetAddresses();
-                                while (inetAddresses.hasMoreElements()) {
-                                    inetAddress = inetAddresses.nextElement();
-                                    if (inetAddress instanceof Inet4Address) {
-                                        ip = inetAddress.getHostAddress();
-                                        ipList.add(ip);
-                                    }
-                                }
-                            }
-                        } catch (SocketException e) {
-                            e.printStackTrace();
-                        }
                         mqttPublishProcessor.publish("test2/"+ LocalDateTime.now().format(DateTimeFormatter.ISO_DATE_TIME), "hello mqtt, im: "+ipList);
                     } catch (Exception e) {
                         e.printStackTrace();
